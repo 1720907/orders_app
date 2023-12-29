@@ -46,7 +46,7 @@ export default function Orders() {
   }
   useEffect(()=>{
      getOrders();
-  },[Orders]);
+  },[]);
 
 //------------------------------------------------------------------------------
 //delete
@@ -54,10 +54,16 @@ export default function Orders() {
   const [modalOpen, setModalOpen] = useState(false);
   const [orderIdToDelete, setOrderIdToDelete] = useState(null);
 
+
   const handleDelete=(order_id)=>{
     setOrderIdToDelete(order_id);
     setModalOpen(true);
   };
+
+  useEffect(() => {
+    getOrders();
+  }, [modalOpen]);
+
 
   const path = "http://localhost:4500/api/Orders/"+orderIdToDelete;
   const path1 = "http://localhost:4500/api/orderProducts/"+orderIdToDelete;
@@ -90,7 +96,6 @@ export default function Orders() {
     // });
     setModalOpen(false);
     setOrderIdToDelete(null);
-    getOrders();
   };
 
   const handleModalClose = () => {

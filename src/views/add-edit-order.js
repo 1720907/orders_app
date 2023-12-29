@@ -43,7 +43,6 @@ const AddOrder = () => {
     const [finalPrice, setFinalPrice] = useState(0);
     let a;
     let ID_ORDER;
-    let parametro;
 
     const getOrders = async () => {
         try {
@@ -58,9 +57,8 @@ const AddOrder = () => {
     }, []);
     
     if (control){
-        parametro = params.get('ID_ORDER');
-        url3 = url3+parametro;
-        ID_ORDER=parametro;
+        ID_ORDER = Number(params.get('ID_ORDER'));
+        url3 = url3+ID_ORDER;
         a = (<h1>Edit Order</h1>);
     }else{
         
@@ -77,8 +75,7 @@ const AddOrder = () => {
             ID_ORDER=1;
         }
         a = (<h1>Add Order</h1>);
-        parametro=ID_ORDER;
-        url3 = url3+parametro;
+        url3 = url3+ID_ORDER;
     }
 
     const url = "http://localhost:4500/api/orderProducts/";
@@ -93,7 +90,7 @@ const AddOrder = () => {
     }
     useEffect(() => {
         getProducts();
-    }, []);
+    }, [order_products]);
     const getOrder=async () =>{
         try {
           const res = await axios.get(url3);
@@ -135,13 +132,17 @@ const AddOrder = () => {
         }
         
     }, [Orders,ID_ORDER]);
-    
-    
+
+    useEffect(() => {
+        if(order_products.length===0){
+            setFinalPrice(0);
+        }
+    },[order_products]);
 
     
     
     //----------------------------------------------------------------------
-    //creating a new order
+    //creating a new order or editing a order
     //url2 for order, url for order_products
     const [modalInsertOrder, setModelInsertOrder] = useState(false);
 
@@ -149,34 +150,71 @@ const AddOrder = () => {
         setModelInsertOrder(true);
     };
 
-    const handleFinishConfirm = () => {
+    const handleFinishConfirm = async () => {
         //logic to add a order
         const order ={ID_ORDER: ID_ORDER, ORDER_N: orderNumber,DATE: new Date().toISOString().slice(0, 19).replace("T", " "), N_PRODUCTS: productCount, FINAL_PRICE : finalPrice};
-        axios.post(`${url2}`, order, {
-            headers: {
-                'Content-Type': "application/json"
-            }
-        })
-            .then(response => {
-                console.log("Response:", response.data);
+        if(control){
+            await axios.put(`${url2}`, order, {
+                headers: {
+                    'Content-Type': "application/json"
+                }
             })
-            .catch(error => {
-                console.error("Error while request", error);
-            });
-        setModelInsertOrder(false); 
+                .then(response => {
+                    console.log("Response:", response.data);
+                })
+                .catch(error => {
+                    console.error("Error while request", error);
+                });
 
-        //logic to add a order_product 
-        axios.post(`${url}`,order_products,{
-            headers: {
-                'Content-type': "application/json"
-            }
-        })
+            //delete entries of order products
+            await axios.delete(`${url}${ID_ORDER}`)
             .then(response => {
-                console.log("Response" , response.data)
+                console.log("Response", response.data);
             })
             .catch(error => {
                 console.log(("Error while request", error));
+            });
+            //send elements in local order_products
+            await axios.post(`${url}`, order_products, {
+                headers: {
+                    'Content-type': "application/json"
+                }
             })
+                .then(response => {
+                    console.log("Response", response.data)
+                })
+                .catch(error => {
+                    console.log(("Error while request", error));
+                })
+ 
+        }else{
+            axios.post(`${url2}`, order, {
+                headers: {
+                    'Content-Type': "application/json"
+                }
+            })
+                .then(response => {
+                    console.log("Response:", response.data);
+                })
+                .catch(error => {
+                    console.error("Error while request", error);
+                });
+            
+
+            //logic to add order_products
+            axios.post(`${url}`, order_products, {
+                headers: {
+                    'Content-type': "application/json"
+                }
+            })
+                .then(response => {
+                    console.log("Response", response.data)
+                })
+                .catch(error => {
+                    console.log(("Error while request", error));
+                })            
+        }
+        setModelInsertOrder(false);
         setOrderNumber(0);
         setProductCount(0);
         setFinalPrice(0);
@@ -228,7 +266,7 @@ const AddOrder = () => {
             }
             else{
                 const nuevo = {
-                    ID_ORDER: ID_ORDER,
+                    ID_ORDER: Number(ID_ORDER),
                     ID_PRODUCT: productIdToAdd,
                     QT: Number(cantidad)
                 }
@@ -281,6 +319,9 @@ const AddOrder = () => {
 
     const handleEditClick = (product_id) => {
         try{
+            order_products.forEach((element)=>{
+                console.log(element);
+            });
             setProductIdToEdit(product_id);
             const el = order_products.find((element) => element.ID_ORDER === ID_ORDER && element.ID_PRODUCT === product_id);
             setNewQT(el.QT);
@@ -303,7 +344,7 @@ const AddOrder = () => {
         setOrderProducts(updateOrderProducts);
         setModalEditOpen(false);
         setNewQT(0);
-        setName('');
+        setName('');    
         setProductIdToEdit(null);
     };
     const handleModalEditClose = () => {
